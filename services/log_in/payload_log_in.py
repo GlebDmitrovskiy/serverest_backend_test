@@ -1,12 +1,12 @@
 class PayLoadLogIn:
     @staticmethod
-    def creat_log():
+    def creat_log(email = None, password = None):
         """
         Создает пользователя с почтой и паролем
         :return: data
         """
         data = {
-            "email": "fulano@qa.com",
-            "password": "teste"
+            "email": email or "fulano@qa.com",
+            "password": password or "teste"
         }
         return data
