@@ -18,7 +18,7 @@ import pytest
 
 
 class TestUsers(BaseTest):
-    @pytest.fixture(autouse= True)
+    @pytest.fixture(autouse=True)
     def create_and_delete_user(self):
         my_email = "huesos.zalupnui@gmail.com"
         data = {
@@ -78,3 +78,39 @@ class TestUsers(BaseTest):
             validation_get_response = NegativeUserGetById(**data_get)
         with allure.step("Проверка сообщения ошибки, при получении удаленного пользователя"):
             assert validation_get_response.message == "Usuário não encontrado"
+
+    @allure.story("Негативная проверка авторизации")
+    @pytest.mark.parametrize("allure_title, nome, email, password, administrador",
+                             [("Проверка негативного создания nome int", 1, "zalupa.blyadina@gmail.com",
+                               text_generator(20), random_role_by_admin()),
+                              ("Проверка негативного создания nome float", 1.5, "zalupa.blyady@gmail.com",
+                               text_generator(15), random_role_by_admin()),
+                              ("Проверка негативного создания nome bool", False, "zalupa.blyadyebanu@gmail.com",
+                               text_generator(20), random_role_by_admin()),
+                              ("Проверка негативного создания nome пустое", "", "zalupu.blyadyebanu@gmail.com",
+                               text_generator(20), random_role_by_admin()),
+                              ("Проверка негативного создания nome из пробелов", "   ",
+                               "zalupochki.blyadyebanu@gmail.com", text_generator(20), random_role_by_admin()),
+                              ("Проверка негативного создания nome None", None, "zalupochka.blyadyebanu@gmail.com",
+                               text_generator(20), random_role_by_admin()),
+                              ("Проверка негативного создания email int", text_generator(10), 5, text_generator(20),
+                               random_role_by_admin()),
+                              ("Проверка негативного создания email float", text_generator(15), 2.28,
+                               text_generator(15), random_role_by_admin()),
+                              ("Проверка негативного создания email bool", text_generator(10), True, text_generator(20),
+                               random_role_by_admin()),
+                              ("Проверка негативного создания email пустое", text_generator(12), "", text_generator(20),
+                               random_role_by_admin()),
+                              ("Проверка негативного создания email из пробелов", text_generator(10), "  ",
+                               text_generator(20), random_role_by_admin()),
+                              ("Проверка негативного создания email None", text_generator(15), None, text_generator(20),
+                               random_role_by_admin()),
+                              ])
+    def test_negative_create_user(self, allure_title, nome: str, email: str, password: str, administrador: str):
+        data = {
+            "nome": nome,
+            "email": email,
+            "password": password,
+            "administrador": administrador
+        }
+        response_post_user = self.api_users.create_user(**data)
