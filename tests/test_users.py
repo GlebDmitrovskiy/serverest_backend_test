@@ -3,7 +3,7 @@ from services.users.schemas import UsersCreateSchema
 from services.users.schemas import NegativeCreateSchema
 from services.users.schemas import UsersGetSchema
 from services.users.schemas import NegativeUserGetById
-from services.users.schemas import UserGetById
+from services.users.schemas import UserGetByIdBody
 from services.users.schemas import DeleteUser
 from services.users.schemas import NegativeDeleteUser
 from services.users.schemas import UpdateUserEmailNew
@@ -18,21 +18,23 @@ import pytest
 
 
 class TestUsers(BaseTest):
-        # @pytest.fixture
-        # def create_and_delete_user(self):
-        #    my_email = "zalupa.bigcock@gmail.com"
-        #    data = {
-        #        "nome": text_generator(10),
-        #        "email": my_email,
-        #        "password": text_generator(15),
-        #        "administrador": random_role_by_admin()
-        #    }
-    #
-    #    self.api_users.create_user(**data)
-    #
-    #    #self.api_users.get_user_by_id(id_user=)
-    #    #yield
+    @pytest.fixture(autouse= True)
+    def create_and_delete_user(self):
+        my_email = "huesos.zalupnui@gmail.com"
+        data = {
+            "nome": text_generator(10),
+            "email": my_email,
+            "password": text_generator(15),
+            "administrador": random_role_by_admin()
+        }
 
+        response_post_user = self.api_users.create_user(**data)
+        id_user = response_post_user.json().get("_id")
+        yield id_user
+        try:
+            assert response_post_user.status_code == 201
+        finally:
+            self.api_users.delete_user(id_user=id_user)
 
     @allure.feature("Добавление пользователя")
     @allure.story("Позитивная проверка создания пользователя")
@@ -49,10 +51,13 @@ class TestUsers(BaseTest):
         with allure.step("Получение id и data"):
             id_user = response_post_user.json().get("_id")
             data_post = response_post_user.json()
+            response_get_user_for_post = self.api_users.get_user_by_id(id_user=id_user)
         with allure.step("Валидация тела и проверка сообщений"):
             UsersCreateSchema(**data)
             validation_data_201 = UsersCreateSchemaStatusCod201(**data_post)
         with allure.step("Проверка сообщения о создании пользователя и проверка id в ответе"):
+            assert response_post_user.status_code == 201
+            assert response_get_user_for_post.status_code == 200
             assert validation_data_201.message == "Cadastro realizado com sucesso"
             assert validation_data_201.id == id_user
         with allure.step("Гарантированное удаление пользователя, при не успешном создании пользователя"):
@@ -73,4 +78,3 @@ class TestUsers(BaseTest):
             validation_get_response = NegativeUserGetById(**data_get)
         with allure.step("Проверка сообщения ошибки, при получении удаленного пользователя"):
             assert validation_get_response.message == "Usuário não encontrado"
-

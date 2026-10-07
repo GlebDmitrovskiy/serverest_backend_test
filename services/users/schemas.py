@@ -7,17 +7,21 @@ class UsersCreateSchema(BaseModel):
     password: str
     administrador: str
 
+
 class UsersCreateSchemaStatusCod201(BaseModel):
     message: str
     id: str = Field(alias="_id")
 
+
 class UsersCreateSchemaStatusCod400(BaseModel):
     message: str
+
+
 class NegativeCreateSchema(BaseModel):
     message: str
 
 
-class UserGetById(BaseModel):
+class UserGetByIdBody(BaseModel):
     nome: str
     email: str
     password: str
@@ -31,22 +35,26 @@ class NegativeUserGetById(BaseModel):
 
 class UsersGetSchema(BaseModel):
     quantidade: int
-    usuarios: list[UserGetById]
+    usuarios: list[UserGetByIdBody]
 
 
 class DeleteUser(BaseModel):
     message: str
 
+
 class NegativeDeleteUser(BaseModel):
     message: str
     idCarrinho: str
 
+
 class UpdateUserEmailOld(BaseModel):
     message: str
+
 
 class UpdateUserEmailNew(BaseModel):
     message: str
     id: str = Field(alias="_id")
+
 
 class NegativeUpdateUser(BaseModel):
     message: str
