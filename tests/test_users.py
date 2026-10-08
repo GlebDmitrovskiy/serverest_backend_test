@@ -143,17 +143,23 @@ class TestUsers(BaseTest):
             self.api_users.delete_user(id_user=id_user)
         with allure.step("Проверка, что пользователь с негативными параметрами, не создался"):
             assert response_post_user.status_code == 400
-            assert  response_get.status_code == 400
+            assert response_get.status_code == 400
 
     @allure.story("Позитивная проверка обновления")
     @pytest.mark.parametrize("allure_title, nome, email, password, administrador",
-    [("Обновление поля nome", text_generator(15), fake.email(), text_generator(20), random_role_by_admin(),
-      ()])
-    def test_positive_put_user(self, create_and_delete_user):
-        with allure.step("Обновление имени пользователя и проверка что его имя обновилось"):
+                             [("Обновление поля nome", text_generator(15), fake.email(), text_generator(20),
+                               random_role_by_admin())
+                              ])
+    def test_positive_put_user(self, create_and_delete_user, allure_title, nome, email, password, administrador):
+        with allure.step("Обновление пользователя и проверка что его данные обновилось"):
             data_put = create_and_delete_user[1]
-            data_put["nome"] = text_generator(15)
-            response_put = self.api_users.update_user(id_user=create_and_delete_user[0], **data_put)
+            new_data = {
+                "nome": nome,
+                "email": email,
+                "password": password,
+                "administrador": administrador
+            }
+            response_put = self.api_users.update_user(id_user=create_and_delete_user[0], **new_data)
             data_response_put = response_put.json()
             validate_put = UpdateUserEmailOld(**data_response_put)
             assert response_put.status_code == 200
@@ -161,12 +167,25 @@ class TestUsers(BaseTest):
             assert validate_put.message == "Registro alterado com sucesso"
             assert self.api_users.get_user_by_id(create_and_delete_user[0]).status_code == 200
             response_get = self.api_users.get_user_by_id(create_and_delete_user[0]).json()
-            assert response_get.get("nome") == data_put["nome"]
-        #with allure.step("Обновление email пользователя и проверка что его email обновилось"):
-        #    data_put["email"] = self.fake.email()
-        #    assert validate_put
-        #    assert response_put.status_code == 200
-        #    assert validate_put.message == "Registro alterado com sucesso"
-        #    assert response_get.get("nome") == data_put["nome"]
+            assert response_get.get("nome") == new_data["nome"]
+            assert response_get.get("email") == new_data["email"]
+            assert response_get.get("password") == new_data["password"]
+            assert response_get.get("administrador") == new_data["administrador"]
 
+        with allure.step("Обновление email у пользователя и проверка что его email обновилось"):
+            data_put["email"] = self.fake.email()
+            response_put_email = self.api_users.update_user("huesos228", **data_put)
+            data_response_put_email = response_put_email.json()
+            validate_put_email = UpdateUserEmailNew(**data_response_put_email)
+            new_id = response_put_email.json()["_id"]
+            assert response_put_email.status_code == 201
+            assert validate_put_email.message == "Cadastro realizado com sucesso"
+            assert validate_put_email
+            response_get_email = self.api_users.get_user_by_id(id_user=new_id).json()
+            assert response_get_email["email"] == data_put["email"]
+            assert self.api_users.get_user_by_id(id_user=new_id).status_code == 200
+            response_delete_put_email = self.api_users.delete_user(new_id)
+            assert response_delete_put_email.status_code == 200
+            assert self.api_users.get_user_by_id(new_id).status_code == 400
 
+        #доделать отдельно емайл пароль и администратора в пут
