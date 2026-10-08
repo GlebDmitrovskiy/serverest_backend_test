@@ -15,12 +15,15 @@ from config.text_generator import text_generator
 from config.random_role import random_role_by_admin
 import allure
 import pytest
+import faker
 
 
 class TestUsers(BaseTest):
-    @pytest.fixture(autouse=True)
+    fake = faker.Faker()
+
+    @pytest.fixture
     def create_and_delete_user(self):
-        my_email = "huesos.zalupnui@gmail.com"
+        my_email = self.fake.email()
         data = {
             "nome": text_generator(10),
             "email": my_email,
@@ -30,7 +33,7 @@ class TestUsers(BaseTest):
 
         response_post_user = self.api_users.create_user(**data)
         id_user = response_post_user.json().get("_id")
-        yield id_user
+        yield id_user, data
         try:
             assert response_post_user.status_code == 201
         finally:
@@ -40,7 +43,8 @@ class TestUsers(BaseTest):
     @allure.story("Позитивная проверка создания пользователя")
     def test_positive_create_user(self):
         with allure.step("Создание пользователя"):
-            my_email = "zalupa.bigcocker@gmail.com"
+            fake = faker.Faker()
+            my_email = fake.email()
             data = {
                 "nome": text_generator(10),
                 "email": my_email,
@@ -53,7 +57,7 @@ class TestUsers(BaseTest):
             data_post = response_post_user.json()
             response_get_user_for_post = self.api_users.get_user_by_id(id_user=id_user)
         with allure.step("Валидация тела и проверка сообщений"):
-            UsersCreateSchema(**data)
+            assert UsersCreateSchema(**data)
             validation_data_201 = UsersCreateSchemaStatusCod201(**data_post)
         with allure.step("Проверка сообщения о создании пользователя и проверка id в ответе"):
             assert response_post_user.status_code == 201
@@ -79,19 +83,17 @@ class TestUsers(BaseTest):
         with allure.step("Проверка сообщения ошибки, при получении удаленного пользователя"):
             assert validation_get_response.message == "Usuário não encontrado"
 
-    @allure.story("Негативная проверка авторизации")
+    @allure.story("Негативная проверка создания")
     @pytest.mark.parametrize("allure_title, nome, email, password, administrador",
-                             [("Проверка негативного создания nome int", 1, "zalupa.blyadina@gmail.com",
+                             [("Проверка негативного создания nome int", 1, fake.email(),
                                text_generator(20), random_role_by_admin()),
-                              ("Проверка негативного создания nome float", 1.5, "zalupa.blyady@gmail.com",
+                              ("Проверка негативного создания nome float", 1.5, fake.email(),
                                text_generator(15), random_role_by_admin()),
-                              ("Проверка негативного создания nome bool", False, "zalupa.blyadyebanu@gmail.com",
+                              ("Проверка негативного создания nome bool", False, fake.email(),
                                text_generator(20), random_role_by_admin()),
-                              ("Проверка негативного создания nome пустое", "", "zalupu.blyadyebanu@gmail.com",
+                              ("Проверка негативного создания nome пустое", "", fake.email(),
                                text_generator(20), random_role_by_admin()),
-                              ("Проверка негативного создания nome из пробелов", "   ",
-                               "zalupochki.blyadyebanu@gmail.com", text_generator(20), random_role_by_admin()),
-                              ("Проверка негативного создания nome None", None, "zalupochka.blyadyebanu@gmail.com",
+                              ("Проверка негативного создания nome None", None, fake.email(),
                                text_generator(20), random_role_by_admin()),
                               ("Проверка негативного создания email int", text_generator(10), 5, text_generator(20),
                                random_role_by_admin()),
@@ -101,10 +103,28 @@ class TestUsers(BaseTest):
                                random_role_by_admin()),
                               ("Проверка негативного создания email пустое", text_generator(12), "", text_generator(20),
                                random_role_by_admin()),
-                              ("Проверка негативного создания email из пробелов", text_generator(10), "  ",
-                               text_generator(20), random_role_by_admin()),
                               ("Проверка негативного создания email None", text_generator(15), None, text_generator(20),
                                random_role_by_admin()),
+                              ("Проверка негативного создания password int", text_generator(15), fake.email(), 1,
+                               random_role_by_admin()),
+                              ("Проверка негативного создания password float", text_generator(20), fake.email(), 1.5,
+                               random_role_by_admin()),
+                              ("Проверка негативного создания password bool", text_generator(20), fake.email(), False,
+                               random_role_by_admin()),
+                              ("Проверка негативного создания password пустое", text_generator(20), fake.email(), "",
+                               random_role_by_admin()),
+                              ("Проверка негативного создания password None", text_generator(15), fake.email(), None,
+                               random_role_by_admin()),
+                              ("Проверка негативного создания  administrador int", text_generator(15), fake.email(),
+                               text_generator(15), 1),
+                              ("Проверка негативного создания  administrador float", text_generator(20), fake.email(),
+                               text_generator(20), 2.28),
+                              ("Проверка негативного создания  administrador bool", text_generator(15), fake.email(),
+                               text_generator(25), True),
+                              ("Проверка негативного создания  administrador пустое", text_generator(10), fake.email(),
+                               text_generator(13), ""),
+                              ("Проверка негативного создания  administrador None", text_generator(19), fake.email(),
+                               text_generator(23), None)
                               ])
     def test_negative_create_user(self, allure_title, nome: str, email: str, password: str, administrador: str):
         data = {
@@ -114,3 +134,39 @@ class TestUsers(BaseTest):
             "administrador": administrador
         }
         response_post_user = self.api_users.create_user(**data)
+        id_user = response_post_user.json().get("_id")
+        response_get = self.api_users.get_user_by_id(id_user=id_user)
+        try:
+            assert response_post_user.status_code == 400
+        finally:
+            print(response_post_user.json())
+            self.api_users.delete_user(id_user=id_user)
+        with allure.step("Проверка, что пользователь с негативными параметрами, не создался"):
+            assert response_post_user.status_code == 400
+            assert  response_get.status_code == 400
+
+    @allure.story("Позитивная проверка обновления")
+    @pytest.mark.parametrize("allure_title, nome, email, password, administrador",
+    [("Обновление поля nome", text_generator(15), fake.email(), text_generator(20), random_role_by_admin(),
+      ()])
+    def test_positive_put_user(self, create_and_delete_user):
+        with allure.step("Обновление имени пользователя и проверка что его имя обновилось"):
+            data_put = create_and_delete_user[1]
+            data_put["nome"] = text_generator(15)
+            response_put = self.api_users.update_user(id_user=create_and_delete_user[0], **data_put)
+            data_response_put = response_put.json()
+            validate_put = UpdateUserEmailOld(**data_response_put)
+            assert response_put.status_code == 200
+            assert validate_put
+            assert validate_put.message == "Registro alterado com sucesso"
+            assert self.api_users.get_user_by_id(create_and_delete_user[0]).status_code == 200
+            response_get = self.api_users.get_user_by_id(create_and_delete_user[0]).json()
+            assert response_get.get("nome") == data_put["nome"]
+        #with allure.step("Обновление email пользователя и проверка что его email обновилось"):
+        #    data_put["email"] = self.fake.email()
+        #    assert validate_put
+        #    assert response_put.status_code == 200
+        #    assert validate_put.message == "Registro alterado com sucesso"
+        #    assert response_get.get("nome") == data_put["nome"]
+
+

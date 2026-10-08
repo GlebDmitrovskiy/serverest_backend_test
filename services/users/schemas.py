@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Optional
 
 
 class UsersCreateSchema(BaseModel):
@@ -19,6 +20,10 @@ class UsersCreateSchemaStatusCod400(BaseModel):
 
 class NegativeCreateSchema(BaseModel):
     message: str
+    nome: Optional[str]
+    email: Optional[str]
+    password: Optional[str]
+    administrador: Optional[str]
 
 
 class UserGetByIdBody(BaseModel):
