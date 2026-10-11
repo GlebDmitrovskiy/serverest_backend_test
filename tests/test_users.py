@@ -1,6 +1,5 @@
 from config.base_test import BaseTest
-from services.users.schemas import UsersCreateSchema
-from services.users.schemas import NegativeCreateSchema
+from services.users.schemas import UsersCreateSchema, NegativeUpdateUserEmail
 from services.users.schemas import UsersGetSchema
 from services.users.schemas import NegativeUserGetById
 from services.users.schemas import UserGetByIdBody
@@ -8,9 +7,8 @@ from services.users.schemas import DeleteUser
 from services.users.schemas import NegativeDeleteUser
 from services.users.schemas import UpdateUserEmailNew
 from services.users.schemas import UpdateUserEmailOld
-from services.users.schemas import NegativeUpdateUser
+from services.users.schemas import NegativeUpdateUserEmail
 from services.users.schemas import UsersCreateSchemaStatusCod201
-from services.users.schemas import UsersCreateSchemaStatusCod400
 from config.text_generator import text_generator
 from config.random_role import random_role_by_admin
 import allure
@@ -155,7 +153,7 @@ class TestUsers(BaseTest):
     def test_positive_put_user(self, create_and_delete_user, field, value):
         with allure.step("Обновление пользователя и проверка что его данные обновились"):
             data_put = create_and_delete_user[1]
-        with allure.step("Обновление всего тела сразуи проверка обновления по одному полю пользователя"):
+        with allure.step("Обновление всего тела сразу и проверка обновления по одному полю пользователя"):
             if field is None:
                 new_data = {
                     "nome": value[0],
@@ -180,8 +178,8 @@ class TestUsers(BaseTest):
                 data_put = create_and_delete_user[1]
                 data_put[field] = value
                 response_put = self.api_users.update_user(create_and_delete_user[0], **data_put)
-                data_response_put_email = response_put.json()
-                validate_put = UpdateUserEmailOld(**data_response_put_email)
+                data_response_put = response_put.json()
+                validate_put = UpdateUserEmailOld(**data_response_put)
                 response_get = self.api_users.get_user_by_id(create_and_delete_user[0]).json()
                 assert response_put.status_code == 200
                 assert validate_put.message == "Registro alterado com sucesso"
@@ -194,10 +192,11 @@ class TestUsers(BaseTest):
         with allure.step("Обновление email у пользователя и проверка что его email обновилось"):
             data_put["email"] = self.fake.email()
             response_put_email = self.api_users.update_user("huesos228", **data_put)
-            data_response_put_email = response_put_email.json()
-            validate_put_email = UpdateUserEmailNew(**data_response_put_email)
+            data_response_put = response_put_email.json()
+            validate_put_email = UpdateUserEmailNew(**data_response_put)
             new_id = response_put_email.json()["_id"]
-        with allure.step("Получение ответа от put, проверка ответа о смене почты с неизвестным id, валидация ответа и проверка о удалении нового созданного пользователя"):
+        with allure.step(
+                "Получение ответа от put, проверка ответа о смене почты с неизвестным id, валидация ответа и проверка о удалении нового созданного пользователя"):
             assert response_put_email.status_code == 201
             assert validate_put_email.message == "Cadastro realizado com sucesso"
             assert validate_put_email
@@ -208,3 +207,93 @@ class TestUsers(BaseTest):
             assert response_delete_put_email.status_code == 200
             assert self.api_users.get_user_by_id(new_id).status_code == 400
 
+    @allure.story("Негативная проверка обновления")
+    @pytest.mark.parametrize("allure_title, field, value",
+                             [("Негативная проверка,  все поля, int", None,
+                               (1, 1, 1, 1)),
+                              ("Негативная проверка, поле nome, int", "nome", 1),
+                              ("Негативная проверка, поле email, int", "email", 1),
+                              ("Негативная проверка, поле password, int", "password", 1),
+                              ("Негативная проверка, поле admininstrador, int", "administrador", 1),
+                              ("Негативная проверка, все поля, float", None,
+                               (1.5, 1, 5, 1, 5, 1, 5)),
+                              ("Негативная проверка, поле nome, float", "nome", 1.5),
+                              ("Негативная проверка, поле email, float", "email", 1.5),
+                              ("Негативная проверка, поле password, float", "password", 1.5),
+                              ("Негативная проверка, поле admininstrador, float", "administrador", 1.5),
+                              ("Негативная проверка, все поля, bool", None,
+                               (False, True, False, False)),
+                              ("Негативная проверка, поле nome, bool", "nome", True),
+                              ("Негативная проверка, поле email, bool", "email", True),
+                              ("Негативная проверка, поле password, bool", "password", True),
+                              ("Негативная проверка, поле admininstrador, bool", "administrador", True),
+                              ("Негативная проверка, все поля, пустые", None,
+                               ("", "", "", "")),
+                              ("Негативная проверка, поле nome, пустое", "nome", ""),
+                              ("Негативная проверка, поле email, пустое", "email", ""),
+                              ("Негативная проверка, поле password, пустое", "password", ""),
+                              ("Негативная проверка, поле admininstrador, пустое", "administrador", ""),
+                              ("Негативная проверка, все поля, None", None,
+                               (None, None, None, None)),
+                              ("Негативная проверка, поле nome, None", "nome", None),
+                              ("Негативная проверка, поле email, None", "email", None),
+                              ("Негативная проверка, поле password, None", "password", None),
+                              ("Негативная проверка, поле admininstrador, None", "administrador", None)
+                              ])
+    def test_negative_update_user(self, create_and_delete_user, allure_title, field, value):
+
+        with allure.step("Негативное обновление почты пользователя и проверка что его данные не обновились"):
+
+            with allure.step("Проверка на подачу в обновление существующего email у пользователя и проверка на ошибку"):
+                with allure.step("Проверка на подачу в обновление существующего email с PostLogIn"):
+                    data_put_email = create_and_delete_user[1]
+                    data_put_email["email"] = "fulano@qa.com"
+                    response_put_email = self.api_users.update_user(create_and_delete_user[0], **data_put_email)
+                    data_response_put = response_put_email.json()
+                    validate_put_email = NegativeUpdateUserEmail(**data_response_put)
+                    assert response_put_email.status_code == 400
+                    assert validate_put_email
+                    assert validate_put_email.message == "Este email já está sendo usado"
+
+        with allure.step("Негативное обновление пользователя и проверка что его данные не обновились"):
+            data_put = create_and_delete_user[1]
+
+        with allure.step("Обновление всего тела сразу и проверка обновления по одному полю пользователя"):
+            if field is None:
+                list_error_for_none = [{'nome': 'nome deve ser uma string',
+                                        'email': 'email deve ser uma string',
+                                        'password': 'password deve ser uma string',
+                                        'administrador': "administrador deve ser 'true' ou 'false'"},
+                                       {'nome': 'nome não pode ficar em branco',
+                                        'email': 'email não pode ficar em branco',
+                                        'password': 'password não pode ficar em branco',
+                                        'administrador': "administrador deve ser 'true' ou 'false'"}
+                                       ]
+                new_data = {
+                    "nome": value[0],
+                    "email": value[1],
+                    "password": value[2],
+                    "administrador": value[3]
+                }
+                response_put = self.api_users.update_user(id_user=create_and_delete_user[0], **new_data)
+                data_response_put = response_put.json()
+                assert response_put.status_code == 400
+                assert data_response_put in list_error_for_none
+
+
+            else:
+                list_error = [{'nome': 'nome deve ser uma string'}, {'email': 'email deve ser uma string'},
+                              {'password': 'password deve ser uma string'},
+                              {'administrador': "administrador deve ser 'true' ou 'false'"},
+                              {'nome': 'nome não pode ficar em branco'}, {'nome': 'nome não pode ficar em branco'},
+                              {'email': 'email não pode ficar em branco'},
+                              {'password': 'password não pode ficar em branco'},
+                              {'administrador': "administrador não pode ficar em branco"},
+                              ]
+                data_put[field] = value
+                data_put = create_and_delete_user[1]
+                data_put[field] = value
+                response_put = self.api_users.update_user(create_and_delete_user[0], **data_put)
+                data_response_put = response_put.json()
+                assert data_response_put in list_error
+                assert response_put.status_code == 400

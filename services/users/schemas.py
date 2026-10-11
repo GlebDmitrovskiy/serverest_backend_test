@@ -61,5 +61,6 @@ class UpdateUserEmailNew(BaseModel):
     id: str = Field(alias="_id")
 
 
-class NegativeUpdateUser(BaseModel):
+class NegativeUpdateUserEmail(BaseModel):
     message: str
+
