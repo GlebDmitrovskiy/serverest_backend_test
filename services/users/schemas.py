@@ -63,4 +63,3 @@ class UpdateUserEmailNew(BaseModel):
 
 class NegativeUpdateUserEmail(BaseModel):
     message: str
-

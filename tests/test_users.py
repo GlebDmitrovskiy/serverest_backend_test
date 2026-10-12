@@ -11,6 +11,7 @@ from services.users.schemas import NegativeUpdateUserEmail
 from services.users.schemas import UsersCreateSchemaStatusCod201
 from config.text_generator import text_generator
 from config.random_role import random_role_by_admin
+from helpers.users_helper import UsersHelper
 import allure
 import pytest
 import faker
@@ -18,6 +19,11 @@ import faker
 
 class TestUsers(BaseTest):
     fake = faker.Faker()
+    user_helper = UsersHelper()
+
+    def cleanup_db(self):
+        users_ids = self.user_helper.get_users(self.api_users.get_users)
+        self.user_helper.cleanup_db(users_ids, self.api_users.delete_user)
 
     @pytest.fixture
     def create_and_delete_user(self):
@@ -174,7 +180,6 @@ class TestUsers(BaseTest):
                 assert response_get.get("password") == new_data["password"]
                 assert response_get.get("administrador") == new_data["administrador"]
             else:
-                data_put[field] = value
                 data_put = create_and_delete_user[1]
                 data_put[field] = value
                 response_put = self.api_users.update_user(create_and_delete_user[0], **data_put)
@@ -297,3 +302,17 @@ class TestUsers(BaseTest):
                 data_response_put = response_put.json()
                 assert data_response_put in list_error
                 assert response_put.status_code == 400
+
+    def test_get_users(self, create_and_delete_user):
+        self.cleanup_db()
+        my_data = create_and_delete_user[1]
+        response_get_users = self.api_users.get_users()
+        validation_get_users = UsersGetSchema(**response_get_users.json())
+        print(response_get_users.json())
+        user_get = response_get_users.json()["usuarios"][-1]
+        assert my_data["nome"] == user_get["nome"]
+        assert my_data["email"] == user_get["email"]
+        assert response_get_users.status_code == 200
+        assert validation_get_users
+
+    #def test_get_user_by_id(self, create_and_delete_user):
