@@ -304,15 +304,40 @@ class TestUsers(BaseTest):
                 assert response_put.status_code == 400
 
     def test_get_users(self, create_and_delete_user):
-        self.cleanup_db()
+        #self.cleanup_db()
         my_data = create_and_delete_user[1]
         response_get_users = self.api_users.get_users()
         validation_get_users = UsersGetSchema(**response_get_users.json())
-        print(response_get_users.json())
         user_get = response_get_users.json()["usuarios"][-1]
         assert my_data["nome"] == user_get["nome"]
         assert my_data["email"] == user_get["email"]
+        assert my_data["password"] == user_get["password"]
+        assert my_data["administrador"] == user_get["administrador"]
         assert response_get_users.status_code == 200
         assert validation_get_users
 
-    #def test_get_user_by_id(self, create_and_delete_user):
+    def test_positive_get_user_by_id(self, create_and_delete_user):
+        id_user = create_and_delete_user[0]
+        data_fixture = create_and_delete_user[1]
+        response_get = self.api_users.get_user_by_id(id_user=id_user)
+        data_get = response_get.json()
+        validation_get_user = UserGetByIdBody(**data_get)
+        assert validation_get_user
+        assert data_fixture["nome"] == data_get["nome"]
+        assert data_fixture["email"] == data_get["email"]
+        assert data_fixture["password"] == data_get["password"]
+        assert data_fixture["administrador"] == data_get["administrador"]
+        assert response_get.status_code == 200
+
+    @pytest.mark.parametrize("allure_title, id_user",[
+        ("Негативное получение user, id int", 1),
+        ("Негативное получение user, id float", 1.5),
+        ("Негативное получение user, id bool", False),
+        ("Негативное получение user, id None", None)
+    ]
+                             )
+    def test_negative_get_user_by_id(self, allure_title, id_user):
+        response_get = self.api_users.get_user_by_id(id_user=id_user)
+        print(response_get.json())
+        assert response_get.status_code == 400
+
